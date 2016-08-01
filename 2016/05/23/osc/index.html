@@ -1,0 +1,203 @@
+<!DOCTYPE html><html lang="en"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="快乐每一天 夏虫不可以语冰"><title>pt-osc工具 | 喀秋莎的技术博客</title><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/normalize/4.2.0/normalize.min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/0.6.0/pure-min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/0.6.0/grids-responsive-min.css"><link rel="stylesheet" type="text/css" href="/css/style.css?v=0.0.0"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.6.3/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/3.0.0/jquery.min.js"></script><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">pt-osc工具</h1><a id="logo" href="/.">喀秋莎的技术博客</a><p class="description">快乐每一天 夏虫不可以语冰</p></div><div id="nav-menu"><a href="/." class="current"><i class="fa fa-home"> Home</i></a><a href="/archives/"><i class="fa fa-archive"> Archive</i></a><a href="/about/"><i class="fa fa-user"> About</i></a><a href="/atom.xml"><i class="fa fa-rss"> RSS</i></a></div></div><div id="layout" class="pure-g"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">pt-osc工具</h1><div class="post-meta">May 23, 2016<span> | </span><span class="category"><a href="/categories/mysql/">mysql</a></span><script src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js" async></script><span id="busuanzi_container_page_pv"> | <span id="busuanzi_value_page_pv"></span><span> Hits</span></span></div><a data-disqus-identifier="2016/05/23/osc/" href="/2016/05/23/osc/#disqus_thread" class="disqus-comment-count"></a><div class="post-content"><p>pt-osc（pt-online-schema-change的缩写）用于对mysql不锁表的ALTER TABLE操作</p>
+<p>官方解释简洁易懂<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">pt-online-schema-<span class="keyword">change</span> - <span class="keyword">ALTER</span> <span class="keyword">tables</span> <span class="keyword">without</span> locking them.</div></pre></td></tr></table></figure></p>
+<p>由于最近踩了坑，我们需要精细的看下osc提供的参数</p>
+<h2 id="规范"><a href="#规范" class="headerlink" title="规范"></a>规范</h2><h3 id="参数"><a href="#参数" class="headerlink" title="参数"></a>参数</h3><table>
+<thead>
+<tr>
+<th>选项</th>
+<th>描述</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>操作必选</em></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>--host</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>--alter</td>
+<td>多语句使用逗号分隔</td>
+<td></td>
+</tr>
+<tr>
+<td>--ask-pass</td>
+<td>登录mysql的密码</td>
+<td></td>
+</tr>
+<tr>
+<td>--charset</td>
+<td>连接后的字符集</td>
+<td></td>
+</tr>
+<tr>
+<td>--database</td>
+<td>连接的数据库</td>
+<td></td>
+</tr>
+<tr>
+<td>--check-alter</td>
+<td>检测alter语句语法</td>
+<td></td>
+</tr>
+<tr>
+<td>--dry-run</td>
+<td>创建new表<br>不创建触发器<br>不拷贝数据<br>不替换新老表</td>
+<td>试运行</td>
+</tr>
+<tr>
+<td>--execute</td>
+<td>必须指定下面的选项，否则只做检查，然后退出<br>[官方友情提示：在没有认真阅读文档的情况下，不要指定这些选项]</td>
+<td>实际执行alter操作</td>
+</tr>
+<tr>
+<td><em>安全配置</em></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>--lock-wait-timeout</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>--chunk-time</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>–check-interval</td>
+<td>修改间隔</td>
+<td></td>
+</tr>
+<tr>
+<td>--max-lag</td>
+<td>每次拷贝数据后观察主从同步延迟是否大于给定值</td>
+<td>会暂停</td>
+</tr>
+<tr>
+<td>--max-load</td>
+<td></td>
+<td>会暂停</td>
+</tr>
+<tr>
+<td>--critical-load</td>
+<td>每次chunk后检查mysql当前状态<br>Threads_connected=x,Threads_running=x</td>
+<td>会终止</td>
+</tr>
+<tr>
+<td>--chunk-size</td>
+<td>控制每次数据拷贝块所查询的行数大小<br>可以使用K,M,G单位<br>[默认1000]<br>受--chunk-time和--chunk-size-limit影响</td>
+<td>会终止</td>
+</tr>
+<tr>
+<td>--chunk-size-limit</td>
+<td>--chunk-size的倍数</td>
+<td></td>
+</tr>
+<tr>
+<td>--chunk-time</td>
+<td>以这个时间为单位获取本次数据拷贝的量，<br>动态调整下一次数据拷贝的量<br>[默认0.5秒]</td>
+<td>0的情况下，需要通过<br>--chunk-size<br>--chunk-size-limit<br>控制数据拷贝量</td>
+</tr>
+<tr>
+<td>3个chunk相关的参数</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>--[no]drop-new-table</td>
+<td>[默认自动删除]</td>
+<td></td>
+</tr>
+<tr>
+<td>--[no]drop-old-table</td>
+<td>[默认自动删除]<br>运行中有报错，需要手动删除</td>
+<td>操作前评估表大小<br>大表需要手动删除</td>
+</tr>
+<tr>
+<td><em>日志相关</em></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>--progress</td>
+<td>打印标准错误输出</td>
+<td></td>
+</tr>
+<tr>
+<td>--statistics</td>
+<td>打印各事件统计信息</td>
+<td></td>
+</tr>
+<tr>
+<td><em>额外配置</em></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>--alter-foreign-keys-method</td>
+<td>有外键（开发规范尽量禁止使用外键）</td>
+<td>该选项下--[no]drop-new-table不工作，因此不清除新表<br>如果同时使用了--force，在alter-foreign-keys-method = none</td>
+</tr>
+<tr>
+<td>--config</td>
+<td>以逗号分隔存储于配置文件，使用时第一选项必须是此选项<br>自动化的同学可以考虑这个</td>
+<td></td>
+</tr>
+<tr>
+<td>–defaults-file</td>
+<td>mysql的相关选项，需要指定配置文件的绝对路径</td>
+<td></td>
+</tr>
+<tr>
+<td><em>注意事项</em></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>--[no]check-replication-filters</td>
+<td>确保从库没有配置<br>binlog_ignore_db<br>replicate_do_db<br>否则运行终止<br>[默认检查]</td>
+<td></td>
+</tr>
+<tr>
+<td>--default-engine</td>
+<td>创建新表时采用mysql的默认引擎<br>[默认创建新表时同老表引擎保持一致]</td>
+<td>危险，不建议使用<br>会引起主从表引擎不一致的情况<br>从库创建新表时会采用mysql的默认引擎</td>
+</tr>
+<tr>
+<td>--null-to-not-null</td>
+<td>[表结构优化类选项]<br>会将NULL的列更改为NOT NULL，对于没有明确指定默认值的，MySQL会根据字段类型提供默认值<br>比如数值是0，字符串是’’</td>
+<td>字符串的默认值还好，对于数值的页面可能会显示不想看到的0</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="操作顺序"><a href="#操作顺序" class="headerlink" title="操作顺序"></a>操作顺序</h3><p>试运行 --dry-run </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"></div></pre></td></tr></table></figure>
+<p>实际执行 --execute</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"></div></pre></td></tr></table></figure>
+<p><strong><em>以上每个步骤分别独立运行，不可放到一句中运行</em></strong></p>
+<h3 id="小技巧"><a href="#小技巧" class="headerlink" title="小技巧"></a>小技巧</h3><p>工具依赖主键和唯一索引，如果要删除主键／重建主键</p>
+<figure class="highlight lsl"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="number">1.</span>使用pt-osc建立唯一索引</div><div class="line"><span class="number">2.</span>使用pt-osc删除主键</div><div class="line"><span class="number">3.</span>使用pt-osc建立新主键</div></pre></td></tr></table></figure>
+<h3 id="DBA的福音"><a href="#DBA的福音" class="headerlink" title="DBA的福音"></a>DBA的福音</h3><figure class="highlight autoit"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">--<span class="literal">null</span>-<span class="keyword">to</span>-<span class="literal">not</span>-<span class="literal">null</span></div></pre></td></tr></table></figure>
+<p>DBA可以通过某一次ALTER TABLE需要，借机对表结构进行优化</p>
+<p><em>这里有个前提：</em><br><em>首先，公司的DDL上线规范，是否允许DBA发起这样的优化修改</em><br><em>其次，DBA需要提前向开发同学说明，字段DEFAULT VALUE是由MySQL根据字段类型自己提供的，那么对业务程序的处理和页面显示的影响，需要开发同学进行评估。所以，如果默认值不能满足业务，该选项不适用</em><br><em>总结，一切以业务为导向</em><br><em>原则：字段约束的规范化应该尽可能的在字段创建阶段完成</em></p>
+<p>to be continued…</p>
+</div><script type="text/javascript" src="/js/share.js?v=0.0.0" async></script><a data-url="http://mckobe23.github.io/2016/05/23/osc/" data-id="circ46gvj000irzs6ijzf3tup" class="article-share-link">Share</a><div class="tags"><a href="/tags/mysql/">mysql</a><a href="/tags/osc/">osc</a></div><div class="post-nav"><a href="/2016/05/30/update-snytax/" class="pre">UPDATE SYNTAX</a><a href="/2016/05/10/engine-innodb/" class="next">MySQL存储引擎InnoDB</a></div><div id="disqus_thread"><script>var disqus_shortname = 'mckobe23';
+var disqus_identifier = '2016/05/23/osc/';
+var disqus_title = 'pt-osc工具';
+var disqus_url = 'http://mckobe23.github.io/2016/05/23/osc/';
+(function() {
+  var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+  dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+})();</script><script id="dsq-count-scr" src="//mckobe23.disqus.com/count.js" async></script></div></div></div></div><div class="pure-u-1-4 hidden_mid_and_down"><div id="sidebar"><div class="widget"><form action="//www.google.com/search" method="get" accept-charset="utf-8" target="_blank" class="search-form"><input type="text" name="q" maxlength="20" placeholder="Search"/><input type="hidden" name="sitesearch" value="http://mckobe23.github.io"/></form></div><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> Categories</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/mongodb/">mongodb</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/mysql/">mysql</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/redis/">redis</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> Tags</i></div><div class="tagcloud"><a href="/tags/osc/" style="font-size: 15px;">osc</a> <a href="/tags/mysql/" style="font-size: 15px;">mysql</a> <a href="/tags/auto-increment/" style="font-size: 15px;">auto increment</a> <a href="/tags/myisam/" style="font-size: 15px;">myisam</a> <a href="/tags/innodb/" style="font-size: 15px;">innodb</a> <a href="/tags/tokudb/" style="font-size: 15px;">tokudb</a> <a href="/tags/mha/" style="font-size: 15px;">mha</a> <a href="/tags/replace-into/" style="font-size: 15px;">replace into</a> <a href="/tags/mongodb/" style="font-size: 15px;">mongodb</a> <a href="/tags/redis/" style="font-size: 15px;">redis</a> <a href="/tags/semi-sync/" style="font-size: 15px;">semi-sync</a> <a href="/tags/sqlserver/" style="font-size: 15px;">sqlserver</a> <a href="/tags/oracle/" style="font-size: 15px;">oracle</a> <a href="/tags/update/" style="font-size: 15px;">update</a> <a href="/tags/utf8mb4/" style="font-size: 15px;">utf8mb4</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> Recent</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2016/07/28/autoincrment-conflict/">主从同步，自增主键差异后的故障切换</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/07/22/replace-autoincrement/">Replace into 带来的主从自增主键差异</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/06/07/mongodb-deploy/">MongoDB部署</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/06/06/redis-deploy/">Redis部署</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/05/30/update-snytax/">UPDATE SYNTAX</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/05/23/osc/">pt-osc工具</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/05/10/engine-innodb/">MySQL存储引擎InnoDB</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/04/06/mha-master-switch/">MHA故障转移之masterha_master_switch</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/04/01/semi-sync/">MySQL半同步注意事项</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/03/23/mha-check-repl/">MHA检测之masterha_check_repl</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-comment-o"> Recent Comments</i></div><script type="text/javascript" src="//mckobe23.disqus.com/recent_comments_widget.js?num_items=5&amp;hide_avatars=1&amp;avatar_size=32&amp;excerpt_length=20&amp;hide_mods=1"></script></div><div class="widget"><div class="widget-title"><i class="fa fa-external-link"> Blogroll</i></div><ul></ul><a href="http://hbprotoss.github.io" title="hbprotoss的博客" target="_blank">hbprotoss的博客</a></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">© <a href="/." rel="nofollow">喀秋莎的技术博客.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a id="rocket" href="#top" class="show"></a><script type="text/javascript" src="/js/totop.js?v=0.0.0" async></script><script type="text/javascript" src="//cdn.bootcss.com/fancybox/2.1.5/jquery.fancybox.pack.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=0.0.0" async></script><link rel="stylesheet" type="text/css" href="/css/jquery.fancybox.css?v=0.0.0"><script type="text/javascript" src="/js/codeblock-resizer.js?v=0.0.0"></script><script type="text/javascript" src="/js/smartresize.js?v=0.0.0"></script></div></body></html>

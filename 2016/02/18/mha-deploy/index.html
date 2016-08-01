@@ -1,0 +1,179 @@
+<!DOCTYPE html><html lang="en"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="快乐每一天 夏虫不可以语冰"><title>MHA部署 | 喀秋莎的技术博客</title><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/normalize/4.2.0/normalize.min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/0.6.0/pure-min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/0.6.0/grids-responsive-min.css"><link rel="stylesheet" type="text/css" href="/css/style.css?v=0.0.0"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.6.3/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/3.0.0/jquery.min.js"></script><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">MHA部署</h1><a id="logo" href="/.">喀秋莎的技术博客</a><p class="description">快乐每一天 夏虫不可以语冰</p></div><div id="nav-menu"><a href="/." class="current"><i class="fa fa-home"> Home</i></a><a href="/archives/"><i class="fa fa-archive"> Archive</i></a><a href="/about/"><i class="fa fa-user"> About</i></a><a href="/atom.xml"><i class="fa fa-rss"> RSS</i></a></div></div><div id="layout" class="pure-g"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">MHA部署</h1><div class="post-meta">Feb 18, 2016<span> | </span><span class="category"><a href="/categories/mysql/">mysql</a></span><script src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js" async></script><span id="busuanzi_container_page_pv"> | <span id="busuanzi_value_page_pv"></span><span> Hits</span></span></div><a data-disqus-identifier="2016/02/18/mha-deploy/" href="/2016/02/18/mha-deploy/#disqus_thread" class="disqus-comment-count"></a><div class="post-content"><p>在安装之前，我们先来做些规划和准备工作</p>
+<p><strong>环境</strong></p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="attribute">Centos</span>: 6.5</div><div class="line"></div><div class="line"><span class="css"><span class="selector-tag">manager</span> 10<span class="selector-class">.20</span><span class="selector-class">.64</span><span class="selector-class">.209</span></span></div><div class="line"><span class="selector-tag">node1</span>	10<span class="selector-class">.20</span><span class="selector-class">.64</span><span class="selector-class">.202</span></div><div class="line"><span class="selector-tag">node2</span>	10<span class="selector-class">.20</span><span class="selector-class">.64</span><span class="selector-class">.203</span></div><div class="line"><span class="selector-tag">node3</span>	10<span class="selector-class">.20</span><span class="selector-class">.64</span><span class="selector-class">.204</span></div><div class="line"><span class="selector-tag">node4</span>	10<span class="selector-class">.20</span><span class="selector-class">.64</span><span class="selector-class">.210</span></div></pre></td></tr></table></figure>
+<p><strong>系统依赖包</strong></p>
+<figure class="highlight vim"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">perl</span> -MCPAN -<span class="keyword">e</span> <span class="string">'install "YAML"'</span></div><div class="line">yum -<span class="keyword">y</span> install <span class="keyword">perl</span>-CPAN</div><div class="line">yum -<span class="keyword">y</span> install <span class="keyword">perl</span>-DBD-MySQL</div><div class="line"><span class="keyword">perl</span> -MCPAN -<span class="keyword">e</span> <span class="string">"install Config::Tiny"</span></div><div class="line"><span class="keyword">perl</span> -MCPAN -<span class="keyword">e</span> <span class="string">"install Log::Dispatch"</span></div><div class="line"><span class="keyword">perl</span> -MCPAN -<span class="keyword">e</span> <span class="string">"install Parallel::ForkManager"</span></div></pre></td></tr></table></figure>
+<p><strong>部署位置</strong><br>{version}参数部分为自动化预留，手动的同学可参考例子</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>node basedir</td>
+<td>/opt/mha-node{version}  例如mha-node056</td>
+</tr>
+<tr>
+<td>manager basedir</td>
+<td>/opt/mha-manager{version}  例如mha-manager056</td>
+</tr>
+<tr>
+<td>config dir</td>
+<td>/opt/mha-manager{version}/etc</td>
+</tr>
+<tr>
+<td>manager work dir</td>
+<td>/opt/mha-manager{version}/apps/{app_name}</td>
+</tr>
+<tr>
+<td>manager log dir</td>
+<td>/opt/mha-manager{version}/logs</td>
+</tr>
+<tr>
+<td>script log dir</td>
+<td>/opt/mha-manager{version}/scripts</td>
+</tr>
+<tr>
+<td>remote work dir</td>
+<td>/opt/mha-node{version}/apps/{app_name}</td>
+</tr>
+</tbody>
+</table>
+<p><em>系统软链</em><br>（很多属于个人习惯，可以跳过，很多都是为了自动化做铺垫。如果读者觉得没有必要，可以忽略下文中软链部分：））</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>node basedir link</td>
+<td>/usr/local/mha-node</td>
+</tr>
+<tr>
+<td>manager basedir link</td>
+<td>/usr/local/mha-manager</td>
+</tr>
+</tbody>
+</table>
+<p>我们看了官方文档后知道MHA需要在主机间建立信任关系，而且官方做法是使用root帐号建立的，这样是很不安全的</p>
+<p>我们知道mha的配置文件是有ssh_user选项的，如下，这里我创建了mha系统帐号，并在主机间使用mha帐号建立信任关系</p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="section">[server default]</span></div><div class="line"><span class="attr">ssh_user</span>=mha</div><div class="line"><span class="attr">ssh_port</span>=<span class="number">22</span></div></pre></td></tr></table></figure>
+<p><strong>创建mysql和mha帐号</strong></p>
+<figure class="highlight lsl"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">useradd mha -u <span class="number">512</span> -G mysql -d /home/mha</div><div class="line">passwd mha</div><div class="line">输入密码</div><div class="line"></div><div class="line">说明：为了统一，我们将mha用户uid固定为<span class="number">512</span>，并隶属于mysql组</div><div class="line">   （由于mha在切换过程中需要访问binlog目录，当然你也可以开放binlog目录的其他用户读权限）</div></pre></td></tr></table></figure>
+<p><strong>建立mha账号信任关系</strong><br><em>创建公钥</em></p>
+<figure class="highlight gradle"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">ssh-keygen</div><div class="line"></div><div class="line">同时将自己的公钥也添加到授权文件中</div><div class="line">cat <span class="regexp">/home/m</span>ha<span class="regexp">/.ssh/i</span>d_rsa.pub &gt; <span class="regexp">/home/m</span>ha<span class="regexp">/.ssh/</span>authorized_keys</div><div class="line">chmod <span class="number">600</span> <span class="regexp">/home/m</span>ha<span class="regexp">/.ssh/</span>authorized_keys</div></pre></td></tr></table></figure>
+<p><em>节点间信任</em></p>
+<figure class="highlight dts"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">推送本地公钥要N个远程</div><div class="line">cat <span class="meta-keyword">/home/</span>mha/.ssh/id_rsa.pub | <span class="class">ssh </span>&#123;nodeN ip&#125; <span class="string">"cat - &gt;&gt; /home/mha/.ssh/authorized_keys"</span></div><div class="line"></div><div class="line"><span class="class">ssh </span>&#123;nodeN ip&#125; <span class="string">"chmod 600 /home/mha/.ssh/authorized_keys"</span></div></pre></td></tr></table></figure>
+<p><em>管理机与节点间信任</em></p>
+<figure class="highlight crmsh"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">将已经生成的<span class="keyword">node</span><span class="title">节点公钥拿到本地</span></div><div class="line">mha@manager ssh｛nodeN ip&#125; 'cat /home/mha/.ssh/id_rsa.pub' &gt;&gt; /home/mha/.ssh/authorized_keys</div><div class="line"></div><div class="line">也将自己的公钥推送给<span class="keyword">node</span><span class="title">节点</span></div><div class="line">cat /home/mha/.ssh/id_rsa.pub | ssh &#123;nodeN ip&#125; <span class="string">"cat - &gt;&gt; /home/mha/.ssh/authorized_keys"</span></div></pre></td></tr></table></figure>
+<p><em>sshd配置</em></p>
+<figure class="highlight stylus"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">是否允许使用基于 GSSAPI 的用户认证：关闭认证</div><div class="line"><span class="selector-id">#GSSAPIAuthentication</span> no </div><div class="line"></div><div class="line">service sshd reload</div></pre></td></tr></table></figure>
+<p><strong>创建mha的mysql实例账号</strong><br>MHA用到以下权限，所以不用赋予ALL（DBA洁癖）</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">GRANT</span> <span class="keyword">SELECT</span>, <span class="keyword">INSERT</span>, <span class="keyword">UPDATE</span>, <span class="keyword">DELETE</span>, <span class="keyword">CREATE</span>, <span class="keyword">DROP</span>, RELOAD, SUPER <span class="keyword">ON</span> *.* <span class="keyword">TO</span> <span class="string">'mha'</span>@<span class="string">'%'</span> <span class="keyword">IDENTIFIED</span> <span class="keyword">BY</span> <span class="string">'xxx'</span>;</div></pre></td></tr></table></figure>
+<h4 id="我们可以将编译安装、创建管理目录、配置全局环境变量封装到RPM包中"><a href="#我们可以将编译安装、创建管理目录、配置全局环境变量封装到RPM包中" class="headerlink" title="我们可以将编译安装、创建管理目录、配置全局环境变量封装到RPM包中"></a>我们可以将编译安装、创建管理目录、配置全局环境变量封装到RPM包中</h4><h3 id="详细内容如下"><a href="#详细内容如下" class="headerlink" title="详细内容如下"></a>详细内容如下</h3><p><strong>编译安装MHA</strong></p>
+<table>
+<thead>
+<tr>
+<th>Node</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>node basedir</td>
+</tr>
+<tr>
+<td>node basedir link</td>
+</tr>
+</tbody>
+</table>
+<figure class="highlight crystal"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line">tar zxvf mha4mysql-node-<span class="number">0.56</span>.tar.gz</div><div class="line"></div><div class="line">cd mha4mysql-node-<span class="number">0.56</span></div><div class="line"></div><div class="line">perl Makefile.PL INSTALL_BASE=<span class="regexp">/opt/mha</span>-node056</div><div class="line"></div><div class="line">说明：这里为选择了INSTALL_BASE选项，它会把node的<span class="class"><span class="keyword">lib</span>包集中在<span class="title">base</span>目录/<span class="title">lib</span>中</span></div><div class="line">如果不写，或者使用PREFIX的话，<span class="class"><span class="keyword">lib</span>会散落在系统<span class="title">lib</span>中，卸载时不利于清理</span></div><div class="line"></div><div class="line">make &amp;&amp; make install</div><div class="line"></div><div class="line">chown -R <span class="symbol">mha:</span>mysql /opt/mha-node056</div><div class="line"></div><div class="line">ln -s /opt/mha-node056 /usr/local/mha-node</div><div class="line"></div><div class="line">ln -s /opt/mha-node056/<span class="class"><span class="keyword">lib</span>/<span class="title">perl5</span>/<span class="title">MHA</span> /<span class="title">usr</span>/<span class="title">local</span>/<span class="title">share</span>/<span class="title">perl5</span>/<span class="title">MHA</span>-<span class="title">Node</span></span></div><div class="line"></div><div class="line">echo <span class="string">'/usr/local/share/perl5/MHA-Node'</span> &gt;&gt; <span class="regexp">/etc/ld</span>.so.conf</div></pre></td></tr></table></figure>
+<p>Node安装完成后会有如下脚本</p>
+<figure class="highlight nginx"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="attribute">apply_diff_relay_logs</span></div><div class="line">filter_mysqlbinlog</div><div class="line">purge_relay_logs</div><div class="line">save_binary_logs</div></pre></td></tr></table></figure>
+<p>Node类库</p>
+<figure class="highlight stylus"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">BinlogHeaderParser<span class="selector-class">.pm</span></div><div class="line">BinlogManager<span class="selector-class">.pm</span></div><div class="line">BinlogPosFinderElp<span class="selector-class">.pm</span></div><div class="line">BinlogPosFinder<span class="selector-class">.pm</span></div><div class="line">BinlogPosFinderXid<span class="selector-class">.pm</span></div><div class="line">BinlogPosFindManager<span class="selector-class">.pm</span></div><div class="line">NodeConst<span class="selector-class">.pm</span></div><div class="line">NodeUtil<span class="selector-class">.pm</span></div><div class="line">SlaveUtil.pm</div></pre></td></tr></table></figure>
+<table>
+<thead>
+<tr>
+<th>Manager</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>manager basedir</td>
+</tr>
+<tr>
+<td>manager basedir link</td>
+</tr>
+</tbody>
+</table>
+<figure class="highlight vim"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line">tar zxvf mha4mysql-manager-<span class="number">0.56</span>.tar.gz</div><div class="line"></div><div class="line"><span class="keyword">cd</span> mha4mysql-manager-<span class="number">0.56</span></div><div class="line"></div><div class="line"><span class="keyword">perl</span> Makefile.PL INSTALL_BASE=/<span class="keyword">opt</span>/mha-manager056</div><div class="line"></div><div class="line"><span class="keyword">make</span> &amp;&amp; <span class="keyword">make</span> install</div><div class="line"></div><div class="line">chown -R mh<span class="variable">a:mysql</span> /<span class="keyword">opt</span>/mha-manager056</div><div class="line"></div><div class="line"><span class="keyword">ln</span> -s /<span class="keyword">opt</span>/mha-node056 /usr/local/mha-manager</div><div class="line"></div><div class="line"><span class="keyword">ln</span> -s /<span class="keyword">opt</span>/mha-node056/lib/perl5/MHA /usr/local/share/perl5/MHA-Manager</div><div class="line"></div><div class="line"><span class="keyword">echo</span> <span class="string">'/usr/local/share/perl5/MHA-Manager'</span> &gt;&gt; /etc/ld.<span class="keyword">so</span>.<span class="keyword">conf</span></div></pre></td></tr></table></figure>
+<p>Manager安装完成后会有如下脚本</p>
+<figure class="highlight autohotkey"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">masterh<span class="built_in">a_stop</span></div><div class="line">masterh<span class="built_in">a_conf</span>_host</div><div class="line">masterh<span class="built_in">a_check</span>_status</div><div class="line">masterh<span class="built_in">a_check</span>_repl</div><div class="line">masterh<span class="built_in">a_secondary</span>_check</div><div class="line">masterh<span class="built_in">a_master</span>_switch</div><div class="line">masterh<span class="built_in">a_master</span>_monitor</div><div class="line">masterh<span class="built_in">a_manager</span></div><div class="line">masterh<span class="built_in">a_check</span>_ssh</div></pre></td></tr></table></figure>
+<p>Manager类库</p>
+<figure class="highlight stylus"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line">Config<span class="selector-class">.pm</span></div><div class="line">DBHelper<span class="selector-class">.pm</span></div><div class="line">FileStatus<span class="selector-class">.pm</span></div><div class="line">HealthCheck<span class="selector-class">.pm</span></div><div class="line">ManagerAdmin<span class="selector-class">.pm</span></div><div class="line">ManagerAdminWrapper<span class="selector-class">.pm</span></div><div class="line">ManagerConst<span class="selector-class">.pm</span></div><div class="line">ManagerUtil<span class="selector-class">.pm</span></div><div class="line">MasterFailover<span class="selector-class">.pm</span></div><div class="line">MasterMonitor<span class="selector-class">.pm</span></div><div class="line">MasterRotate<span class="selector-class">.pm</span></div><div class="line">ServerManager<span class="selector-class">.pm</span></div><div class="line">Server<span class="selector-class">.pm</span></div><div class="line">SSHCheck.pm</div></pre></td></tr></table></figure>
+<p><strong>创建管理目录</strong><br>一定要保证/opt/mha-node056与/opt/mha-manager056目录权限为mha:mysql</p>
+<table>
+<thead>
+<tr>
+<th>Node</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>remote work dir</td>
+</tr>
+</tbody>
+</table>
+<figure class="highlight vim"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="built_in">mkdir</span> -<span class="keyword">p</span> /<span class="keyword">opt</span>/mha-node056/apps</div><div class="line"></div><div class="line">chown -R mh<span class="variable">a:mysql</span> /<span class="keyword">opt</span>/mha-node056</div></pre></td></tr></table></figure>
+<table>
+<thead>
+<tr>
+<th>Manager</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>config dir</td>
+</tr>
+<tr>
+<td>manager work dir</td>
+</tr>
+<tr>
+<td>manager log dir</td>
+</tr>
+<tr>
+<td>script log dir</td>
+</tr>
+</tbody>
+</table>
+<figure class="highlight vim"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="built_in">mkdir</span> -<span class="keyword">p</span> /<span class="keyword">opt</span>/mha-manager056/&#123;etc,apps,logs,scripts&#125;</div><div class="line"></div><div class="line">chown -R mh<span class="variable">a:mysql</span> /<span class="keyword">opt</span>/mha-manager056</div></pre></td></tr></table></figure>
+<p><strong>配置全局环境变量</strong><br>MHA-Node</p>
+<figure class="highlight vim"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">echo</span> <span class="string">"MHA_NODE_PATH=/usr/local/mha/bin"</span> &gt;&gt; /etc/<span class="keyword">profile</span></div><div class="line"><span class="keyword">echo</span> <span class="string">"export PATH=\$PATH:\$MHA_NODE_PATH"</span> &gt;&gt; /etc/<span class="keyword">profile</span></div><div class="line"></div><div class="line"><span class="keyword">source</span> /etc/<span class="keyword">profile</span></div></pre></td></tr></table></figure>
+<p>MHA-Manager</p>
+<figure class="highlight vim"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">echo</span> <span class="string">"MHA_MANAGER_PATH=/usr/local/mha/bin"</span> &gt;&gt; /etc/<span class="keyword">profile</span></div><div class="line"><span class="keyword">echo</span> <span class="string">"export PATH=\$PATH:\$MHA_MANAGER_PATH"</span> &gt;&gt; /etc/<span class="keyword">profile</span></div><div class="line"></div><div class="line"><span class="keyword">source</span> /etc/<span class="keyword">profile</span></div></pre></td></tr></table></figure>
+<p><strong>配置文件</strong><br>manger &amp; node 合并为一个配置文件{app_name}.cnf</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div></pre></td><td class="code"><pre><div class="line">mha$ vi &#123;app_name&#125;.cnf</div><div class="line"></div><div class="line"><span class="comment"># Manager</span></div><div class="line">[server default]</div><div class="line">ssh_user=mha</div><div class="line">ssh_port=22</div><div class="line">user=mha</div><div class="line">password=</div><div class="line">port=3306</div><div class="line">repl_user=repl</div><div class="line">repl_password=</div><div class="line">log_level=info</div><div class="line"></div><div class="line"><span class="comment"># Const</span></div><div class="line">client_bindir=/usr/local/mysql/bin</div><div class="line">client_libdir=/usr/local/mysql/lib</div><div class="line"><span class="comment"># Variable</span></div><div class="line">master_binlog_dir=/opt/mysqldata/&#123;port&#125;/binlog</div><div class="line">remote_workdir=/opt/mha-node&#123;version&#125;/apps/&#123;app_name&#125;</div><div class="line">manager_workdir=/opt/mha-manager&#123;version&#125;/apps/&#123;app_name&#125;</div><div class="line">manager_log=/usr/local/mha-manager/logs/&#123;app_name&#125;.log</div><div class="line"></div><div class="line"><span class="comment"># Check</span></div><div class="line">secondary_check_script= masterha_secondary_check -s &#123;node2 ip&#125; -s &#123;node3 ip&#125;</div><div class="line">ping_interval=5</div><div class="line"></div><div class="line"><span class="comment"># Failover DIY Scripts</span></div><div class="line"><span class="comment"># master_ip_failover_script= /scripts/master_ip_failover</span></div><div class="line">这里可以使用你自己的脚本，结合dns或者haproxy完成切换的完整工作</div><div class="line"></div><div class="line"><span class="comment"># shutdown_script= scripts/power_manager</span></div><div class="line"><span class="comment"># report_script= scripts/send_report</span></div><div class="line"><span class="comment"># master_ip_online_change_script= scripts/master_ip_online_change</span></div><div class="line"></div><div class="line"><span class="comment"># Node</span></div><div class="line">[server1]</div><div class="line">hostname=&#123;node1 ip&#125;</div><div class="line">candidate_master=1</div><div class="line">node_label=&#123;app_name&#125; master</div><div class="line"></div><div class="line">[server2]</div><div class="line">hostname=&#123;node2 ip&#125;</div><div class="line">candidate_master=1</div><div class="line">node_label=&#123;app_name&#125; standby</div><div class="line"></div><div class="line">[server3]</div><div class="line">hostname=&#123;node3 ip&#125;</div><div class="line">no_master=1</div><div class="line">node_label=&#123;app_name&#125; slave</div></pre></td></tr></table></figure>
+<p><strong>用户环境变量</strong><br>这个属于踩坑后的配置（后续补充上报错内容）<br>在MHA check的时候会报错，所以需要添加完整的环境变量到到mha用户下</p>
+<figure class="highlight ruby"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">mha$</div><div class="line">echo $PATH</div><div class="line"></div><div class="line">将环境变量实际内容贴到environment文件中，否则bash失效</div><div class="line">echo <span class="string">"PATH=/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin:/usr/local/mysql/bin:/home/mha/bin"</span> &gt; <span class="regexp">/home/mha</span><span class="regexp">/.ssh/environment</span></div><div class="line"></div><div class="line">echo <span class="string">"PermitUserEnvironment yes"</span> <span class="meta">&gt;&gt; </span>/etc/ssh/sshd_config</div><div class="line">是否允许sshd处理 ~<span class="regexp">/.ssh/environment</span> 以及 ~<span class="regexp">/.ssh/authorized</span>_keys 中的 environment= 选项：允许</div><div class="line"></div><div class="line">service sshd reload</div></pre></td></tr></table></figure>
+<p><strong>检测MHA</strong><br><em>检测SSH通讯</em></p>
+<figure class="highlight elixir"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">mha<span class="variable">$ </span>masterha_check_ssh --conf=<span class="regexp">/usr/local</span><span class="regexp">/mha-manager/etc</span><span class="regexp">/&#123;app_name&#125;.conf</span></div></pre></td></tr></table></figure>
+<p><em>检测集群同步</em></p>
+<figure class="highlight crystal"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">mha$ masterha_check_repl --conf=<span class="regexp">/usr/local</span><span class="regexp">/mha-manager/etc</span><span class="regexp">/&#123;app_name&#125;.conf</span></div><div class="line"></div><div class="line">--  /opt<span class="regexp">/mha-manager056/apps</span><span class="regexp">/test masterha_check_repl自动创建</span></div></pre></td></tr></table></figure>
+<p><strong>启动MHA</strong></p>
+<figure class="highlight elixir"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">mha<span class="variable">$ </span>masterha_manager --conf=<span class="regexp">/usr/local</span><span class="regexp">/mha-manager/etc</span><span class="regexp">/&#123;app_name&#125;.conf &amp;</span></div></pre></td></tr></table></figure>
+<p>MHA Manager在每次切换后，将退出进程。修改配置后，再次检测，启动</p>
+</div><script type="text/javascript" src="/js/share.js?v=0.0.0" async></script><a data-url="http://mckobe23.github.io/2016/02/18/mha-deploy/" data-id="circ46gva000arzs6genxeiaq" class="article-share-link">Share</a><div class="tags"><a href="/tags/mysql/">mysql</a><a href="/tags/mha/">mha</a></div><div class="post-nav"><a href="/2016/03/10/utf8mb4/" class="pre">utf8转换utf8mb4引发的问题</a><a href="/2016/02/05/mha-official/" class="next">MHA官方资料</a></div><div id="disqus_thread"><script>var disqus_shortname = 'mckobe23';
+var disqus_identifier = '2016/02/18/mha-deploy/';
+var disqus_title = 'MHA部署';
+var disqus_url = 'http://mckobe23.github.io/2016/02/18/mha-deploy/';
+(function() {
+  var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+  dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+})();</script><script id="dsq-count-scr" src="//mckobe23.disqus.com/count.js" async></script></div></div></div></div><div class="pure-u-1-4 hidden_mid_and_down"><div id="sidebar"><div class="widget"><form action="//www.google.com/search" method="get" accept-charset="utf-8" target="_blank" class="search-form"><input type="text" name="q" maxlength="20" placeholder="Search"/><input type="hidden" name="sitesearch" value="http://mckobe23.github.io"/></form></div><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> Categories</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/mongodb/">mongodb</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/mysql/">mysql</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/redis/">redis</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> Tags</i></div><div class="tagcloud"><a href="/tags/osc/" style="font-size: 15px;">osc</a> <a href="/tags/mysql/" style="font-size: 15px;">mysql</a> <a href="/tags/auto-increment/" style="font-size: 15px;">auto increment</a> <a href="/tags/myisam/" style="font-size: 15px;">myisam</a> <a href="/tags/innodb/" style="font-size: 15px;">innodb</a> <a href="/tags/tokudb/" style="font-size: 15px;">tokudb</a> <a href="/tags/mha/" style="font-size: 15px;">mha</a> <a href="/tags/replace-into/" style="font-size: 15px;">replace into</a> <a href="/tags/mongodb/" style="font-size: 15px;">mongodb</a> <a href="/tags/redis/" style="font-size: 15px;">redis</a> <a href="/tags/semi-sync/" style="font-size: 15px;">semi-sync</a> <a href="/tags/sqlserver/" style="font-size: 15px;">sqlserver</a> <a href="/tags/oracle/" style="font-size: 15px;">oracle</a> <a href="/tags/update/" style="font-size: 15px;">update</a> <a href="/tags/utf8mb4/" style="font-size: 15px;">utf8mb4</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> Recent</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2016/07/28/autoincrment-conflict/">主从同步，自增主键差异后的故障切换</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/07/22/replace-autoincrement/">Replace into 带来的主从自增主键差异</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/06/07/mongodb-deploy/">MongoDB部署</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/06/06/redis-deploy/">Redis部署</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/05/30/update-snytax/">UPDATE SYNTAX</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/05/23/osc/">pt-osc工具</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/05/10/engine-innodb/">MySQL存储引擎InnoDB</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/04/06/mha-master-switch/">MHA故障转移之masterha_master_switch</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/04/01/semi-sync/">MySQL半同步注意事项</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/03/23/mha-check-repl/">MHA检测之masterha_check_repl</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-comment-o"> Recent Comments</i></div><script type="text/javascript" src="//mckobe23.disqus.com/recent_comments_widget.js?num_items=5&amp;hide_avatars=1&amp;avatar_size=32&amp;excerpt_length=20&amp;hide_mods=1"></script></div><div class="widget"><div class="widget-title"><i class="fa fa-external-link"> Blogroll</i></div><ul></ul><a href="http://hbprotoss.github.io" title="hbprotoss的博客" target="_blank">hbprotoss的博客</a></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">© <a href="/." rel="nofollow">喀秋莎的技术博客.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a id="rocket" href="#top" class="show"></a><script type="text/javascript" src="/js/totop.js?v=0.0.0" async></script><script type="text/javascript" src="//cdn.bootcss.com/fancybox/2.1.5/jquery.fancybox.pack.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=0.0.0" async></script><link rel="stylesheet" type="text/css" href="/css/jquery.fancybox.css?v=0.0.0"><script type="text/javascript" src="/js/codeblock-resizer.js?v=0.0.0"></script><script type="text/javascript" src="/js/smartresize.js?v=0.0.0"></script></div></body></html>
